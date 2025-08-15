@@ -53,11 +53,21 @@ export default function Board() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
+      
+      const responseText = await response.text()
+      console.log('API Response:', responseText)
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update')
+        console.error('API Error:', response.status, responseText)
+        throw new Error(`API Error: ${response.status} - ${responseText}`)
       }
-      return response.json()
+      
+      try {
+        return JSON.parse(responseText)
+      } catch (e) {
+        console.error('JSON Parse Error:', e, 'Response:', responseText)
+        throw new Error(`Invalid JSON response: ${responseText}`)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board'] })
