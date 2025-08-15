@@ -9,7 +9,25 @@ import {
   isDayGreyed,
   getDayOffset
 } from '@/lib/calculations'
-import { addDays, format, startOfDay } from 'date-fns'
+import { addDays, format, startOfDay, isWeekend } from 'date-fns'
+
+// Function to get only weekdays (Monday-Friday)
+function getWeekdays(): Date[] {
+  const today = startOfDay(new Date())
+  const dates: Date[] = []
+  
+  // Start from yesterday and go forward
+  let currentDate = addDays(today, -1)
+  
+  while (dates.length < 5) {
+    if (!isWeekend(currentDate)) {
+      dates.push(new Date(currentDate))
+    }
+    currentDate = addDays(currentDate, 1)
+  }
+  
+  return dates
+}
 
 function verifyApiKey(request: NextRequest): boolean {
   const url = new URL(request.url)
@@ -31,8 +49,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const today = startOfDay(new Date())
-    const dates = [-1, 0, 1, 2, 3].map(d => addDays(today, d))
+    const dates = getWeekdays()
 
     const records = await prisma.dayRecord.findMany({
       where: {
