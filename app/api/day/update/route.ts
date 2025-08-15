@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate boardType
-    if (!Object.values(BoardType).includes(boardType as BoardType)) {
+    if (!['HVAC', 'PLUMBING'].includes(boardType)) {
       return NextResponse.json(
         { error: 'Invalid boardType. Must be HVAC or PLUMBING', code: 'VALIDATION_ERROR' },
         { status: 400 }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const currentRecord = await prisma.dayRecord.findUnique({
       where: {
         boardType_date: {
-          boardType: boardType as BoardType,
+          boardType: boardType as any,
           date: dateObj
         }
       }
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     const updatedRecord = await prisma.dayRecord.upsert({
       where: {
         boardType_date: {
-          boardType: boardType as BoardType,
+          boardType: boardType as any,
           date: dateObj
         }
       },
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date()
       },
       create: {
-        boardType: boardType as BoardType,
+        boardType: boardType as any,
         date: dateObj,
         techCount: finalTechCount,
         actualJobs: finalActualJobs,

@@ -197,9 +197,7 @@ export default function Board() {
                 {/* Editable Fields */}
                 <div className="space-y-2 text-sm">
                   {/* Techs */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Techs:</span>
                     {editingCell?.date === dateStr && editingCell?.field === 'techCount' && editingCell?.boardType === boardType ? (
                       <input
@@ -213,13 +211,13 @@ export default function Board() {
                           const delta = e.deltaY > 0 ? -1 : 1
                           setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
                         }}
-                        className="w-16 text-center border rounded px-1 bg-white"
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
                         autoFocus
                       />
                     ) : (
                       <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
                         }`}
                         onClick={() => handleCellClick(dateStr, 'techCount', boardType, dayData?.techCount)}
                       >
@@ -229,9 +227,7 @@ export default function Board() {
                   </div>
 
                   {/* Actual Jobs */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Actual:</span>
                     {editingCell?.date === dateStr && editingCell?.field === 'actualJobs' && editingCell?.boardType === boardType ? (
                       <input
@@ -245,13 +241,13 @@ export default function Board() {
                           const delta = e.deltaY > 0 ? -1 : 1
                           setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
                         }}
-                        className="w-16 text-center border rounded px-1 bg-white"
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
                         autoFocus
                       />
                     ) : (
                       <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
                         }`}
                         onClick={() => handleCellClick(dateStr, 'actualJobs', boardType, dayData?.actualJobs)}
                       >
@@ -261,21 +257,17 @@ export default function Board() {
                   </div>
 
                   {/* Min Goal - not editable */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Min Goal:</span>
-                    <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                       {dayData?.minGoal || 0}
                     </span>
                   </div>
 
                   {/* Variance - not editable */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Variance:</span>
-                    <span className={`font-medium ${
+                    <span className={`font-bold text-lg ${
                       (dayData?.variance || 0) > 0 ? 'text-green-600' : 
                       (dayData?.variance || 0) < 0 ? 'text-red-600' : 
                       darkMode ? 'text-white' : 'text-gray-800'
@@ -287,9 +279,7 @@ export default function Board() {
                 
                 <div className="border-t pt-2 mt-2">
                   {/* Aged/TO Opp */}
-                  <div className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center text-sm py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp:</span>
                     {editingCell?.date === dateStr && editingCell?.field === 'agedOpps' && editingCell?.boardType === boardType ? (
                       <input
@@ -303,13 +293,13 @@ export default function Board() {
                           const delta = e.deltaY > 0 ? -1 : 1
                           setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
                         }}
-                        className="w-16 text-center border rounded px-1 bg-white"
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
                         autoFocus
                       />
                     ) : (
                       <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
                         }`}
                         onClick={() => handleCellClick(dateStr, 'agedOpps', boardType, dayData?.agedOpps)}
                       >
@@ -319,11 +309,9 @@ export default function Board() {
                   </div>
                   
                   {/* Aged/TO Opp % - not editable */}
-                  <div className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center text-sm py-1 px-2 rounded">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp%:</span>
-                    <span className={`font-medium ${
+                    <span className={`font-bold text-lg ${
                       (dayData?.agedPercent || 0) >= 33 ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {(dayData?.agedPercent || 0).toFixed(1)}%
