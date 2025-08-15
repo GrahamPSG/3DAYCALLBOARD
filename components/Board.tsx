@@ -122,7 +122,7 @@ export default function Board() {
   const weekdays = getWeekdays()
   const dayLabels = ['Yesterday', 'Today', 'Tomorrow', '+2 Days', '+3 Days']
 
-  const renderBoardSection = (title: string, boardType: BoardType, bgColor: string) => {
+  const renderBoardSection = (title: string, boardType: string, bgColor: string) => {
     const boardData_typed = boardData[boardType.toLowerCase() as 'hvac' | 'plumbing']
     
     return (
@@ -334,10 +334,10 @@ export default function Board() {
         </div>
 
         {/* HVAC Board with light red background */}
-        {renderBoardSection('HVAC', BoardType.HVAC, darkMode ? 'bg-red-900/20' : 'bg-red-50/50')}
+        {renderBoardSection('HVAC', 'HVAC', darkMode ? 'bg-red-900/20' : 'bg-red-50/50')}
         
         {/* Plumbing Board with light blue background */}
-        {renderBoardSection('Plumbing', BoardType.PLUMBING, darkMode ? 'bg-blue-900/20' : 'bg-blue-50/50')}
+        {renderBoardSection('Plumbing', 'PLUMBING', darkMode ? 'bg-blue-900/20' : 'bg-blue-50/50')}
 
         {/* Improved Legend */}
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mt-8`}>
