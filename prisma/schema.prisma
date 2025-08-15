@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DayRecord {
+  id          String    @id @default(cuid())
+  boardType   BoardType
+  date        DateTime  @db.Date
+  techCount   Int       @default(0)
+  actualJobs  Int       @default(0)
+  agedOpps    Int       @default(0)
+  minGoal     Int       @default(0)
+  variance    Int       @default(0)
+  agedPercent Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([boardType, date])
+  @@index([date])
+  @@index([boardType])
+}
+
+model Weather {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  tempLow   Float
+  tempHigh  Float
+  raw       Json?
+  fetchedAt DateTime @default(now())
+  
+  @@index([date])
+}
+
+model UnlockSession {
+  id         String   @id @default(cuid())
+  unlockedBy String?
+  unlockedAt DateTime @default(now())
+  expiresAt  DateTime
+  
+  @@index([expiresAt])
+}
+
+model AlertLog {
+  id        String    @id @default(cuid())
+  boardType BoardType
+  date      DateTime
+  type      AlertType
+  message   String
+  sentTo    String[]
+  sentAt    DateTime  @default(now())
+  success   Boolean
+  error     String?
+  
+  @@index([date, boardType])
+}
+
+enum BoardType {
+  HVAC
+  PLUMBING
+}
+
+enum AlertType {
+  VARIANCE_NEGATIVE
+  AGED_BELOW_TARGET
+  SYSTEM_ERROR
+}
