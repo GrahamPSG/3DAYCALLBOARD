@@ -53,36 +53,14 @@ export default function Board() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update')
-      }
+      if (!response.ok) throw new Error('Failed to update')
       return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board'] })
       setEditingCell(null)
-    },
-    onError: (error) => {
-      console.error('Update failed:', error)
-      alert(`Update failed: ${error.message}`)
     }
   })
-
-  const weekdays = getWeekdays()
-  const dayLabels = ['Yesterday', 'Today', 'Tomorrow', '+2 Days', '+3 Days']
-  
-  // Target percentages: Today=100%, Tomorrow=66%, +2=33%, +3=none
-  const getTargetPercentage = (index: number): number | null => {
-    switch(index) {
-      case 0: return 100 // Yesterday
-      case 1: return 100 // Today  
-      case 2: return 66  // Tomorrow
-      case 3: return 33  // +2 Days
-      case 4: return null // +3 Days (no target)
-      default: return null
-    }
-  }
 
   const handleCellClick = (date: string, field: string, boardType: string, currentValue: any) => {
     // Don't allow editing locked days
@@ -106,20 +84,12 @@ export default function Board() {
     if (editingCell.field === 'actualJobs') updateData.actualJobs = value  
     if (editingCell.field === 'agedOpps') updateData.agedOpps = value
     
-    console.log('Updating:', updateData) // Debug log
     updateMutation.mutate(updateData)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSave()
     if (e.key === 'Escape') setEditingCell(null)
-  }
-
-  // Check if a row meets target
-  const meetsTarget = (dayData: any, targetPercent: number | null): boolean => {
-    if (!targetPercent || !dayData) return false
-    const actualPercent = (dayData.actualJobs / dayData.minGoal) * 100
-    return actualPercent >= targetPercent
   }
 
   if (isLoading) {
@@ -149,6 +119,21 @@ export default function Board() {
 
   if (!boardData) return null
 
+  const weekdays = getWeekdays()
+  const dayLabels = ['Yesterday', 'Today', 'Tomorrow', '+2 Days', '+3 Days']
+  
+  // Target percentages: Today=100%, Tomorrow=66%, +2=33%, +3=none
+  const getTargetPercentage = (index: number): number | null => {
+    switch(index) {
+      case 0: return 100 // Yesterday
+      case 1: return 100 // Today  
+      case 2: return 66  // Tomorrow
+      case 3: return 33  // +2 Days
+      case 4: return null // +3 Days (no target)
+      default: return null
+    }
+  }
+
   const renderBoardSection = (title: string, boardType: string, bgColor: string) => {
     const boardData_typed = boardData[boardType.toLowerCase() as 'hvac' | 'plumbing']
     
@@ -164,8 +149,6 @@ export default function Board() {
             const dayData = boardData_typed[dateStr]
             const isToday = index === 1
             const isLocked = dayData?.locked
-            const targetPercent = getTargetPercentage(index)
-            const meetingTarget = targetPercent ? meetsTarget(dayData, targetPercent) : false
             
             return (
               <div
@@ -197,83 +180,75 @@ export default function Board() {
                 {/* Editable Fields */}
                 <div className="space-y-2 text-sm">
                   {/* Techs */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Techs:</span>
-                    {editingCell?.date === dateStr && editingCell?.field === 'techCount' && editingCell?.boardType === boardType ? (
-                      <input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleSave}
-                        onKeyDown={handleKeyPress}
-                        onWheel={(e) => {
-                          e.preventDefault()
-                          const delta = e.deltaY > 0 ? -1 : 1
-                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
-                        }}
-                        className="w-16 text-center border rounded px-1 bg-white"
-                        autoFocus
-                      />
-                    ) : (
-                      <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
-                        }`}
-                        onClick={() => handleCellClick(dateStr, 'techCount', boardType, dayData?.techCount)}
-                      >
-                        {dayData?.techCount || 0}
-                      </span>
-                    )}
+                    <span 
+                      className={`font-medium cursor-pointer px-2 py-1 rounded ${
+                        !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                      } ${darkMode ? 'text-white hover:bg-gray-600' : ''}`}
+                      onClick={() => handleCellClick(dateStr, 'techCount', boardType, dayData?.techCount)}
+                    >
+                      {editingCell?.date === dateStr && editingCell?.field === 'techCount' ? (
+                        <input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleSave}
+                          onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
+                          className="w-16 text-center border rounded px-1"
+                          autoFocus
+                        />
+                      ) : (
+                        dayData?.techCount || 0
+                      )}
+                    </span>
                   </div>
 
                   {/* Actual Jobs */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Actual:</span>
-                    {editingCell?.date === dateStr && editingCell?.field === 'actualJobs' && editingCell?.boardType === boardType ? (
-                      <input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleSave}
-                        onKeyDown={handleKeyPress}
-                        onWheel={(e) => {
-                          e.preventDefault()
-                          const delta = e.deltaY > 0 ? -1 : 1
-                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
-                        }}
-                        className="w-16 text-center border rounded px-1 bg-white"
-                        autoFocus
-                      />
-                    ) : (
-                      <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
-                        }`}
-                        onClick={() => handleCellClick(dateStr, 'actualJobs', boardType, dayData?.actualJobs)}
-                      >
-                        {dayData?.actualJobs || 0}
-                      </span>
-                    )}
+                    <span 
+                      className={`font-medium cursor-pointer px-2 py-1 rounded ${
+                        !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                      } ${darkMode ? 'text-white hover:bg-gray-600' : ''}`}
+                      onClick={() => handleCellClick(dateStr, 'actualJobs', boardType, dayData?.actualJobs)}
+                    >
+                      {editingCell?.date === dateStr && editingCell?.field === 'actualJobs' ? (
+                        <input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleSave}
+                          onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
+                          className="w-16 text-center border rounded px-1"
+                          autoFocus
+                        />
+                      ) : (
+                        dayData?.actualJobs || 0
+                      )}
+                    </span>
                   </div>
 
-                  {/* Min Goal - not editable */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  {/* Min Goal */}
+                  <div className="flex justify-between items-center">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Min Goal:</span>
-                    <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    <span className={`font-medium ${darkMode ? 'text-white' : ''}`}>
                       {dayData?.minGoal || 0}
                     </span>
                   </div>
 
-                  {/* Variance - not editable */}
-                  <div className={`flex justify-between items-center py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  {/* Variance */}
+                  <div className="flex justify-between items-center">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Variance:</span>
                     <span className={`font-medium ${
                       (dayData?.variance || 0) > 0 ? 'text-green-600' : 
@@ -287,41 +262,37 @@ export default function Board() {
                 
                 <div className="border-t pt-2 mt-2">
                   {/* Aged/TO Opp */}
-                  <div className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  <div className="flex justify-between items-center text-sm">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp:</span>
-                    {editingCell?.date === dateStr && editingCell?.field === 'agedOpps' && editingCell?.boardType === boardType ? (
-                      <input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleSave}
-                        onKeyDown={handleKeyPress}
-                        onWheel={(e) => {
-                          e.preventDefault()
-                          const delta = e.deltaY > 0 ? -1 : 1
-                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
-                        }}
-                        className="w-16 text-center border rounded px-1 bg-white"
-                        autoFocus
-                      />
-                    ) : (
-                      <span 
-                        className={`font-medium cursor-pointer px-2 py-1 rounded bg-white border ${
-                          !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
-                        }`}
-                        onClick={() => handleCellClick(dateStr, 'agedOpps', boardType, dayData?.agedOpps)}
-                      >
-                        {dayData?.agedOpps || 0}
-                      </span>
-                    )}
+                    <span 
+                      className={`font-medium cursor-pointer px-2 py-1 rounded ${
+                        !isLocked ? 'hover:bg-blue-100 hover:text-blue-800' : ''
+                      } ${darkMode ? 'text-white hover:bg-gray-600' : ''}`}
+                      onClick={() => handleCellClick(dateStr, 'agedOpps', boardType, dayData?.agedOpps)}
+                    >
+                      {editingCell?.date === dateStr && editingCell?.field === 'agedOpps' ? (
+                        <input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleSave}
+                          onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
+                          className="w-16 text-center border rounded px-1"
+                          autoFocus
+                        />
+                      ) : (
+                        dayData?.agedOpps || 0
+                      )}
+                    </span>
                   </div>
                   
-                  {/* Aged/TO Opp % - not editable */}
-                  <div className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                    targetPercent && dayData ? (meetingTarget ? 'bg-green-100' : 'bg-red-100') : ''
-                  }`}>
+                  {/* Aged/TO Opp % */}
+                  <div className="flex justify-between items-center text-sm">
                     <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp%:</span>
                     <span className={`font-medium ${
                       (dayData?.agedPercent || 0) >= 33 ? 'text-green-600' : 'text-red-600'
@@ -377,7 +348,7 @@ export default function Board() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Day headers - with Yesterday and +3 Days in grey */}
+        {/* Day headers - highlighting 3-day period */}
         <div className="grid grid-cols-5 gap-6 mb-8">
           {dayLabels.map((label, index) => (
             <div 
@@ -385,7 +356,7 @@ export default function Board() {
               className={`text-center py-4 px-4 rounded-lg font-bold text-sm border-2 ${
                 index === 1 
                   ? `${darkMode ? 'bg-blue-800 text-white border-blue-600' : 'bg-blue-600 text-white border-blue-500'}` 
-                  : index >= 2 && index <= 3
+                  : index <= 3
                     ? `${darkMode ? 'bg-green-700 text-white border-green-600' : 'bg-green-500 text-white border-green-400'}`
                     : `${darkMode ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-200 text-gray-700 border-gray-300'}`
               }`}
@@ -395,11 +366,11 @@ export default function Board() {
           ))}
         </div>
 
-        {/* HVAC Board with brighter red background */}
-        {renderBoardSection('HVAC', 'HVAC', darkMode ? 'bg-red-800/30' : 'bg-red-100/80')}
+        {/* HVAC Board with light red background */}
+        {renderBoardSection('HVAC', 'HVAC', darkMode ? 'bg-red-900/20' : 'bg-red-50/50')}
         
-        {/* Plumbing Board with brighter blue background */}
-        {renderBoardSection('Plumbing', 'PLUMBING', darkMode ? 'bg-blue-800/30' : 'bg-blue-100/80')}
+        {/* Plumbing Board with light blue background */}
+        {renderBoardSection('Plumbing', 'PLUMBING', darkMode ? 'bg-blue-900/20' : 'bg-blue-50/50')}
 
         {/* Improved Legend */}
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mt-8`}>
@@ -425,7 +396,6 @@ export default function Board() {
             <div className="font-medium">• Variance = Actual Jobs - Minimum Goal</div>
             <div className="font-medium">• Aged/TO Opp % = (Aged Opportunities ÷ Actual Jobs) × 100</div>
             <div className="font-medium">• Targets: Yesterday/Today=100%, Tomorrow=66%, +2=33%, +3=15%</div>
-            <div className="font-medium">• White boxes = editable fields, Row highlighting = target achievement</div>
           </div>
         </div>
 
