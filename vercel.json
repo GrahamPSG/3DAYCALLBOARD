@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/weather",
+      "schedule": "0 * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

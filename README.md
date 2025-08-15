@@ -30,9 +30,9 @@ Before setting up the application, you'll need:
    - Create a new database
    - Copy the connection string
 
-2. **OpenWeather API Key**
-   - Sign up at [https://openweathermap.org/api](https://openweathermap.org/api)
-   - Get a free API key
+2. **Weather Data**
+   - No API key required! Weather data is automatically scraped from wttr.in
+   - Provides real-time weather for North Vancouver
 
 3. **Twilio Account** (for SMS alerts)
    - Sign up at [https://www.twilio.com](https://www.twilio.com)
@@ -55,9 +55,8 @@ Before setting up the application, you'll need:
    # Database
    DATABASE_URL="postgresql://user:password@host:5432/callboard?sslmode=require"
    
-   # Weather API
-   OPENWEATHER_API_KEY="your-openweather-api-key"
-   WEATHER_LOCATION="North Vancouver,CA"
+   # Weather (No API key needed - uses web scraping)
+   # Weather data is automatically fetched from wttr.in for North Vancouver
    
    # Twilio SMS
    TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
