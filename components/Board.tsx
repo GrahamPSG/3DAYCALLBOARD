@@ -121,17 +121,29 @@ export default function Board() {
 
   const weekdays = getWeekdays()
   const dayLabels = ['Yesterday', 'Today', 'Tomorrow', '+2 Days', '+3 Days']
+  
+  // Target percentages: Today=100%, Tomorrow=66%, +2=33%, +3=none
+  const getTargetPercentage = (index: number): number | null => {
+    switch(index) {
+      case 0: return 100 // Yesterday
+      case 1: return 100 // Today  
+      case 2: return 66  // Tomorrow
+      case 3: return 33  // +2 Days
+      case 4: return null // +3 Days (no target)
+      default: return null
+    }
+  }
 
   const renderBoardSection = (title: string, boardType: string, bgColor: string) => {
     const boardData_typed = boardData[boardType.toLowerCase() as 'hvac' | 'plumbing']
     
     return (
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mb-8 ${bgColor}`}>
+      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-8 mb-8 ${bgColor} border-4 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
         <h2 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
           {title} Board
         </h2>
         
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-5 gap-6">
           {weekdays.map((date, index) => {
             const dateStr = format(date, 'yyyy-MM-dd')
             const dayData = boardData_typed[dateStr]
@@ -141,24 +153,28 @@ export default function Board() {
             return (
               <div
                 key={dateStr}
-                className={`p-4 rounded-lg border-2 ${
+                className={`p-4 rounded-lg ${
                   isToday 
-                    ? `border-blue-500 ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}` 
+                    ? `border-blue-600 border-4 ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}` 
                     : isLocked 
-                      ? `border-yellow-400 ${darkMode ? 'bg-gray-600' : 'bg-yellow-50'}`
-                      : `border-gray-200 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`
-                } transition-all hover:shadow-md`}
+                      ? `border-yellow-500 border-3 ${darkMode ? 'bg-gray-600' : 'bg-yellow-50'}`
+                      : index <= 3 
+                        ? `border-green-500 border-3 ${darkMode ? 'bg-gray-700' : 'bg-green-50'}`
+                        : `border-gray-300 border-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`
+                } transition-all hover:shadow-lg`}
               >
                 <div className="text-center mb-3">
-                  <div className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {dayLabels[index]}
+                  <div className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    {format(date, 'EEEE')}
                   </div>
-                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {format(date, 'MMM d')}
                   </div>
-                  <div className={`text-xs font-medium ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                    Target: {boardData.targets[dateStr] || 0}%
-                  </div>
+                  {getTargetPercentage(index) && (
+                    <div className={`text-xs font-medium ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      Target: {getTargetPercentage(index)}%
+                    </div>
+                  )}
                 </div>
 
                 {/* Editable Fields */}
@@ -179,6 +195,11 @@ export default function Board() {
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleSave}
                           onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
                           className="w-16 text-center border rounded px-1"
                           autoFocus
                         />
@@ -204,6 +225,11 @@ export default function Board() {
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleSave}
                           onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
                           className="w-16 text-center border rounded px-1"
                           autoFocus
                         />
@@ -251,6 +277,11 @@ export default function Board() {
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleSave}
                           onKeyDown={handleKeyPress}
+                          onWheel={(e) => {
+                            e.preventDefault()
+                            const delta = e.deltaY > 0 ? -1 : 1
+                            setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                          }}
                           className="w-16 text-center border rounded px-1"
                           autoFocus
                         />
@@ -317,15 +348,17 @@ export default function Board() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Day headers */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        {/* Day headers - highlighting 3-day period */}
+        <div className="grid grid-cols-5 gap-6 mb-8">
           {dayLabels.map((label, index) => (
             <div 
               key={label}
-              className={`text-center py-3 px-4 rounded-lg font-medium text-sm ${
+              className={`text-center py-4 px-4 rounded-lg font-bold text-sm border-2 ${
                 index === 1 
-                  ? `${darkMode ? 'bg-blue-800 text-white' : 'bg-blue-600 text-white'}` 
-                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                  ? `${darkMode ? 'bg-blue-800 text-white border-blue-600' : 'bg-blue-600 text-white border-blue-500'}` 
+                  : index <= 3
+                    ? `${darkMode ? 'bg-green-700 text-white border-green-600' : 'bg-green-500 text-white border-green-400'}`
+                    : `${darkMode ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-200 text-gray-700 border-gray-300'}`
               }`}
             >
               {label}
