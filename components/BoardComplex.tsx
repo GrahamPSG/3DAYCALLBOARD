@@ -48,26 +48,28 @@ export default function Board() {
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateDataRequest) => {
       const key = new URLSearchParams(window.location.search).get('key')
-      console.log('Sending update:', data)
-      
       const response = await fetch(`/api/day/update?key=${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
       
-      console.log('Response status:', response.status)
       const responseText = await response.text()
-      console.log('Response text:', responseText)
+      console.log('API Response:', responseText)
       
       if (!response.ok) {
+        console.error('API Error:', response.status, responseText)
         throw new Error(`API Error: ${response.status} - ${responseText}`)
       }
       
-      return JSON.parse(responseText)
+      try {
+        return JSON.parse(responseText)
+      } catch (e) {
+        console.error('JSON Parse Error:', e, 'Response:', responseText)
+        throw new Error(`Invalid JSON response: ${responseText}`)
+      }
     },
-    onSuccess: (data) => {
-      console.log('Update successful:', data)
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board'] })
       setEditingCell(null)
     },
@@ -93,14 +95,9 @@ export default function Board() {
   }
 
   const handleCellClick = (date: string, field: string, boardType: string, currentValue: any) => {
-    console.log('Cell clicked:', { date, field, boardType, currentValue })
-    
     // Don't allow editing locked days
     const boardKey = boardType.toLowerCase() as 'hvac' | 'plumbing'
-    if (boardData?.[boardKey]?.[date]?.locked) {
-      console.log('Day is locked, cannot edit')
-      return
-    }
+    if (boardData?.[boardKey]?.[date]?.locked) return
     
     setEditingCell({ date, field, boardType })
     setEditValue(String(currentValue || 0))
@@ -108,8 +105,6 @@ export default function Board() {
 
   const handleSave = () => {
     if (!editingCell) return
-    
-    console.log('Saving:', editingCell, editValue)
     
     const value = parseInt(editValue) || 0
     const updateData: UpdateDataRequest = {
@@ -121,17 +116,20 @@ export default function Board() {
     if (editingCell.field === 'actualJobs') updateData.actualJobs = value  
     if (editingCell.field === 'agedOpps') updateData.agedOpps = value
     
+    console.log('Updating:', updateData) // Debug log
     updateMutation.mutate(updateData)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSave()
-    }
-    if (e.key === 'Escape') {
-      setEditingCell(null)
-    }
+    if (e.key === 'Enter') handleSave()
+    if (e.key === 'Escape') setEditingCell(null)
+  }
+
+  // Check if a row meets target
+  const meetsTarget = (dayData: any, targetPercent: number | null): boolean => {
+    if (!targetPercent || !dayData) return false
+    const actualPercent = (dayData.actualJobs / dayData.minGoal) * 100
+    return actualPercent >= targetPercent
   }
 
   if (isLoading) {
@@ -176,6 +174,8 @@ export default function Board() {
             const dayData = boardData_typed[dateStr]
             const isToday = index === 1
             const isLocked = dayData?.locked
+            const targetPercent = getTargetPercentage(index)
+            const meetingTarget = targetPercent ? meetsTarget(dayData, targetPercent) : false
             
             return (
               <div
@@ -204,108 +204,123 @@ export default function Board() {
                   )}
                 </div>
 
-                {/* Editable Fields - SIMPLIFIED */}
-                <div className="space-y-3">
+                {/* Editable Fields */}
+                <div className="space-y-2 text-sm">
                   {/* Techs */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Techs:</span>
-                    <div 
-                      className="w-16 h-8 bg-white border-2 border-blue-400 rounded cursor-pointer flex items-center justify-center font-bold text-gray-800 hover:bg-blue-50"
-                      onClick={() => {
-                        console.log('Techs clicked for', boardType, dateStr)
-                        handleCellClick(dateStr, 'techCount', boardType, dayData?.techCount)
-                      }}
-                    >
-                      {editingCell?.date === dateStr && editingCell?.field === 'techCount' && editingCell?.boardType === boardType ? (
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleSave}
-                          onKeyDown={handleKeyPress}
-                          className="w-full h-full text-center bg-transparent border-none outline-none font-bold"
-                          autoFocus
-                        />
-                      ) : (
-                        dayData?.techCount || 0
-                      )}
-                    </div>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Techs:</span>
+                    {editingCell?.date === dateStr && editingCell?.field === 'techCount' && editingCell?.boardType === boardType ? (
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleSave}
+                        onKeyDown={handleKeyPress}
+                        onWheel={(e) => {
+                          e.preventDefault()
+                          const delta = e.deltaY > 0 ? -1 : 1
+                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                        }}
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
+                        autoFocus
+                      />
+                    ) : (
+                      <span 
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
+                        }`}
+                        onClick={() => handleCellClick(dateStr, 'techCount', boardType, dayData?.techCount)}
+                      >
+                        {dayData?.techCount || 0}
+                      </span>
+                    )}
                   </div>
 
                   {/* Actual Jobs */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Actual:</span>
-                    <div 
-                      className="w-16 h-8 bg-white border-2 border-blue-400 rounded cursor-pointer flex items-center justify-center font-bold text-gray-800 hover:bg-blue-50"
-                      onClick={() => {
-                        console.log('Actual clicked for', boardType, dateStr)
-                        handleCellClick(dateStr, 'actualJobs', boardType, dayData?.actualJobs)
-                      }}
-                    >
-                      {editingCell?.date === dateStr && editingCell?.field === 'actualJobs' && editingCell?.boardType === boardType ? (
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleSave}
-                          onKeyDown={handleKeyPress}
-                          className="w-full h-full text-center bg-transparent border-none outline-none font-bold"
-                          autoFocus
-                        />
-                      ) : (
-                        dayData?.actualJobs || 0
-                      )}
-                    </div>
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Actual:</span>
+                    {editingCell?.date === dateStr && editingCell?.field === 'actualJobs' && editingCell?.boardType === boardType ? (
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleSave}
+                        onKeyDown={handleKeyPress}
+                        onWheel={(e) => {
+                          e.preventDefault()
+                          const delta = e.deltaY > 0 ? -1 : 1
+                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                        }}
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
+                        autoFocus
+                      />
+                    ) : (
+                      <span 
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
+                        }`}
+                        onClick={() => handleCellClick(dateStr, 'actualJobs', boardType, dayData?.actualJobs)}
+                      >
+                        {dayData?.actualJobs || 0}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Min Goal */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Min Goal:</span>
-                    <span className="font-bold text-lg">
+                  {/* Min Goal - not editable */}
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Min Goal:</span>
+                    <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                       {dayData?.minGoal || 0}
                     </span>
                   </div>
 
-                  {/* Variance */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Variance:</span>
+                  {/* Variance - not editable */}
+                  <div className="flex justify-between items-center py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Variance:</span>
                     <span className={`font-bold text-lg ${
                       (dayData?.variance || 0) > 0 ? 'text-green-600' : 
-                      (dayData?.variance || 0) < 0 ? 'text-red-600' : 'text-gray-800'
+                      (dayData?.variance || 0) < 0 ? 'text-red-600' : 
+                      darkMode ? 'text-white' : 'text-gray-800'
                     }`}>
                       {(dayData?.variance || 0) > 0 ? '+' : ''}{dayData?.variance || 0}
                     </span>
                   </div>
-
+                </div>
+                
+                <div className="border-t pt-2 mt-2">
                   {/* Aged/TO Opp */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Aged/TO Opp:</span>
-                    <div 
-                      className="w-16 h-8 bg-white border-2 border-blue-400 rounded cursor-pointer flex items-center justify-center font-bold text-gray-800 hover:bg-blue-50"
-                      onClick={() => {
-                        console.log('Aged clicked for', boardType, dateStr)
-                        handleCellClick(dateStr, 'agedOpps', boardType, dayData?.agedOpps)
-                      }}
-                    >
-                      {editingCell?.date === dateStr && editingCell?.field === 'agedOpps' && editingCell?.boardType === boardType ? (
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleSave}
-                          onKeyDown={handleKeyPress}
-                          className="w-full h-full text-center bg-transparent border-none outline-none font-bold"
-                          autoFocus
-                        />
-                      ) : (
-                        dayData?.agedOpps || 0
-                      )}
-                    </div>
+                  <div className="flex justify-between items-center text-sm py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp:</span>
+                    {editingCell?.date === dateStr && editingCell?.field === 'agedOpps' && editingCell?.boardType === boardType ? (
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleSave}
+                        onKeyDown={handleKeyPress}
+                        onWheel={(e) => {
+                          e.preventDefault()
+                          const delta = e.deltaY > 0 ? -1 : 1
+                          setEditValue(String(Math.max(0, (parseInt(editValue) || 0) + delta)))
+                        }}
+                        className="w-16 text-center border-2 border-blue-400 rounded px-1 bg-white font-bold text-gray-800"
+                        autoFocus
+                      />
+                    ) : (
+                      <span 
+                        className={`font-bold cursor-pointer px-3 py-2 rounded bg-white border-2 border-gray-300 text-gray-800 ${
+                          !isLocked ? 'hover:bg-blue-100 hover:border-blue-400' : ''
+                        }`}
+                        onClick={() => handleCellClick(dateStr, 'agedOpps', boardType, dayData?.agedOpps)}
+                      >
+                        {dayData?.agedOpps || 0}
+                      </span>
+                    )}
                   </div>
-
-                  {/* Aged/TO Opp % */}
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Aged/TO Opp%:</span>
+                  
+                  {/* Aged/TO Opp % - not editable */}
+                  <div className="flex justify-between items-center text-sm py-1 px-2 rounded">
+                    <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aged/TO Opp%:</span>
                     <span className={`font-bold text-lg ${
                       (dayData?.agedPercent || 0) >= 33 ? 'text-green-600' : 'text-red-600'
                     }`}>
@@ -315,8 +330,20 @@ export default function Board() {
                 </div>
 
                 {isLocked && (
-                  <div className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mt-2">
+                  <div className={`text-xs p-2 rounded mt-2 ${
+                    darkMode ? 'text-yellow-400 bg-gray-600' : 'text-yellow-700 bg-yellow-100'
+                  }`}>
                     🔒 This day is locked
+                  </div>
+                )}
+
+                {/* Weather for today, tomorrow, +2 */}
+                {index >= 1 && index <= 3 && boardData.weather[dateStr] && (
+                  <div className={`mt-2 text-center border-t pt-2 ${darkMode ? 'border-gray-600' : ''}`}>
+                    <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Weather</div>
+                    <div className={`text-sm font-medium ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      {Math.round(boardData.weather[dateStr].low)}° / {Math.round(boardData.weather[dateStr].high)}°
+                    </div>
                   </div>
                 )}
               </div>
@@ -348,7 +375,7 @@ export default function Board() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Day headers */}
+        {/* Day headers - with Yesterday and +3 Days in grey */}
         <div className="grid grid-cols-5 gap-6 mb-8">
           {dayLabels.map((label, index) => (
             <div 
@@ -366,11 +393,39 @@ export default function Board() {
           ))}
         </div>
 
-        {/* HVAC Board */}
+        {/* HVAC Board with brighter red background */}
         {renderBoardSection('HVAC', 'HVAC', darkMode ? 'bg-red-800/30' : 'bg-red-100/80')}
         
-        {/* Plumbing Board */}
+        {/* Plumbing Board with brighter blue background */}
         {renderBoardSection('Plumbing', 'PLUMBING', darkMode ? 'bg-blue-800/30' : 'bg-blue-100/80')}
+
+        {/* Improved Legend */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6 mt-8`}>
+          <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Legend</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <div className={`w-4 h-4 rounded ${darkMode ? 'bg-green-600' : 'bg-green-200'}`}></div>
+              <span className={`font-medium text-sm ${darkMode ? 'text-green-400' : 'text-green-700'}`}>On/Above Target</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-4 h-4 rounded ${darkMode ? 'bg-red-600' : 'bg-red-200'}`}></div>
+              <span className={`font-medium text-sm ${darkMode ? 'text-red-400' : 'text-red-700'}`}>Below Target</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-4 h-4 rounded ${darkMode ? 'bg-yellow-600' : 'bg-yellow-200'}`}></div>
+              <span className={`font-medium text-sm ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>Locked Day</span>
+            </div>
+          </div>
+          
+          <div className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className="font-medium">• Minimum Goal = Tech Count × 3</div>
+            <div className="font-medium">• Variance = Actual Jobs - Minimum Goal</div>
+            <div className="font-medium">• Aged/TO Opp % = (Aged Opportunities ÷ Actual Jobs) × 100</div>
+            <div className="font-medium">• Targets: Yesterday/Today=100%, Tomorrow=66%, +2=33%, +3=15%</div>
+            <div className="font-medium">• White boxes = editable fields, Row highlighting = target achievement</div>
+          </div>
+        </div>
 
         {/* Dark/Light Mode Toggle */}
         <div className="fixed bottom-6 right-6">
